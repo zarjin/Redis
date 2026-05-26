@@ -8,16 +8,5 @@ services:
     volumes:
       - redis-data:/data
 
-  mongo:
-    image: mongo:latest
-    container_name: zarjin-mongo
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_DATABASE: zarjin_mongodb
-    volumes:
-      - mongo-data:/data
-
 volumes:
   redis-data:
-  mongo-data:
