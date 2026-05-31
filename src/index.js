@@ -9,22 +9,24 @@ app.use(express.json());
 
 const redis = new Redis(process.env.REDIS_URL);
 
-app.post("/user/:id/hash", async (req, res) => {
+const QUEUE_KEY = "queue:email";
+
+app.post("/email", async (req, res) => {
   try {
-    const userId = req.params.id;
-    await redis.hset(userId, req.body);
-    res.status(200).json({ message: "user data uplaod succes" });
+    const { to, subject, body } = req.body;
+    const Job = await redis.lpush(QUEUE_KEY, JSON.stringify(to, subject, body));
+    res.status(200).json({ success: true, Job });
   } catch (error) {
     console.log(error);
     res.status(500).json(error);
   }
 });
 
-app.get("/user/:id/hash", async (req, res) => {
+app.get("/email", async (req, res) => {
   try {
-    const userId = req.params.id;
-    const profile = await redis.hgetall(userId);
-    res.status(200).json(profile);
+    const jobData = await redis.rpop(QUEUE_KEY);
+    const Job = await JSON.parse(jobData);
+    res.status(200).json({ success: true, Job });
   } catch (error) {
     console.log(error);
     res.status(500).json(error);
@@ -34,5 +36,5 @@ app.get("/user/:id/hash", async (req, res) => {
 const PORT = process.env.PORT;
 
 app.listen(PORT, () => {
-  console.log(`server is runing port ${PORT}`);
+  console.log(`server is ruining port ${PORT}`);
 });
