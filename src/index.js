@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import Redis from "ioredis";
+import { emailQueue } from "./queue.js";
 
 dotenv.config();
 
@@ -14,19 +15,22 @@ const QUEUE_KEY = "queue:email";
 app.post("/email", async (req, res) => {
   try {
     const { to, subject, body } = req.body;
-    const Job = await redis.lpush(QUEUE_KEY, JSON.stringify(to, subject, body));
-    res.status(200).json({ success: true, Job });
-  } catch (error) {
-    console.log(error);
-    res.status(500).json(error);
-  }
-});
-
-app.get("/email", async (req, res) => {
-  try {
-    const jobData = await redis.rpop(QUEUE_KEY);
-    const Job = await JSON.parse(jobData);
-    res.status(200).json({ success: true, Job });
+    const job = await emailQueue.add(
+      "email",
+      {
+        to,
+        subject,
+        body,
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 1000,
+        },
+      },
+    );
+    res.status(200).json({ success: true, jobId: job.id });
   } catch (error) {
     console.log(error);
     res.status(500).json(error);
